@@ -1,0 +1,11 @@
+import { readFile, readdir, access } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { Script } from 'node:vm';
+const html = await readFile('index.html', 'utf8');
+const sources = [];
+for (const match of html.matchAll(/<script defer src="([^"]+)"/g)) sources.push(await readFile(match[1], 'utf8'));
+new Script(sources.join('\n;\n'), { filename: 'combined-editor.js' });
+for (const match of html.matchAll(/(?:src|href)="((?:src|public)\/[^\"]+)"/g)) await access(match[1]);
+for (const file of await readdir('src/js')) if (file.endsWith('.js')) execFileSync(process.execPath, ['--check', `src/js/${file}`]);
+execFileSync(process.execPath, ['--check', 'public/vendor/mediabunny.js']);
+console.log('Sintaxis JavaScript y rutas de recursos verificadas.');

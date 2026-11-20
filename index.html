@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sync Studio · Editor de audio y video</title>
+<meta name="description" content="Sincroniza, mezcla y recorta video y audio localmente en tu navegador.">
+<meta name="theme-color" content="#050505">
+<link rel="icon" href="public/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Jost:wght@400&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,1,-25..200&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="src/styles/base.css">
+<link rel="stylesheet" href="src/styles/ios.css">
+</head>
+<body>
+<header class="nav glass"><a class="brand" href="./" aria-label="Sync Studio, inicio"><span class="brand-icon" aria-hidden="true">≋</span> Sync Studio <span class="brand-tag">LOCAL</span></a>
+<div class="seg" id="themeSeg" role="group" aria-label="Apariencia"><button data-m="auto">Auto</button><button data-m="light" aria-label="Claro"><span aria-hidden="true" class="material-symbols-rounded">light_mode</span></button><button data-m="dark" aria-label="Oscuro"><span aria-hidden="true" class="material-symbols-rounded">dark_mode</span></button></div></header>
+<a class="skip-link" href="#workspace">Saltar al editor</a>
+<main id="workspace">
+<section class="intro" aria-labelledby="title"><div class="eyebrow">TU IMAGEN. EL SONIDO PERFECTO.</div><h1 id="title">Todo en su tiempo.</h1><p>Une tu video con el mejor audio.<br>Sincroniza, ajusta y crea, sin salir del navegador.</p></section>
+<div class="section-heading"><h2><span>01</span> Importa tus archivos</h2></div>
+<div class="tiles">
+  <label class="tile" id="dropV"><input type="file" accept="video/*,.mkv,.mov,.mp4,.webm,.avi"><div class="ico"><span aria-hidden="true" class="material-symbols-rounded">movie</span></div><b>Video</b><span class="file-name">Elegir archivo o arrastrar aquí</span></label>
+  <label class="tile" id="dropA"><input type="file" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg,.aac"><div class="ico"><span aria-hidden="true" class="material-symbols-rounded">graphic_eq</span></div><b>Audio externo</b><span class="file-name">Elegir archivo o arrastrar aquí</span></label>
+</div>
+<div class="row import-actions"><button class="btn main wide" id="btnSync" disabled><span aria-hidden="true" class="material-symbols-rounded">sync</span>Sincronizar</button>
+<label class="select-wrap" aria-label="Duración del análisis"><span aria-hidden="true" class="material-symbols-rounded select-icon">timer</span><select class="sel" id="win" aria-label="Analizar los primeros"><option value="60">1 min</option><option value="180" selected>3 min</option><option value="300">5 min</option></select><span aria-hidden="true" class="material-symbols-rounded select-chevron">expand_more</span></label></div>
+<div class="status" id="status" role="status" aria-live="polite"></div>
+<div class="result glass" id="result"><div class="result-head"><span class="big" id="offBig">0 ms</span><span class="badge" id="conf"></span></div><p id="offTxt"></p></div>
+<section class="card join-card" aria-labelledby="joinTitle">
+  <div class="join-heading"><div class="join-title-row"><span class="join-icon material-symbols-rounded" aria-hidden="true">movie</span><div><h3 id="joinTitle">Unir videos</h3><p>Organiza los clips y crea un solo video.</p></div></div><span class="join-badge" id="joinBadge">0 clips</span></div>
+  <div class="join-toolbar"><span>ORDEN DE REPRODUCCIÓN</span><label class="join-add" for="joinFiles"><span class="material-symbols-rounded" aria-hidden="true">add_circle</span>Agregar clips</label><input id="joinFiles" type="file" accept="video/*,.mkv,.mov,.mp4,.webm,.avi" multiple></div>
+  <ol id="joinList" class="join-list" aria-live="polite"></ol>
+  <div class="join-empty" id="joinEmpty"><span class="material-symbols-rounded" aria-hidden="true">video_library</span><span>Agrega videos para preparar tu secuencia.</span></div>
+  <div class="export-options">
+    <label for="joinMode">Modo</label>
+    <span class="join-select"><select id="joinMode" aria-label="Modo de unión"><option value="fast">Rápido (sin recodificar)</option><option value="auto">Compatible (convierte si hace falta)</option></select><span class="material-symbols-rounded join-chevron" aria-hidden="true">keyboard_arrow_down</span></span>
+    <label for="joinFormat">Formato</label>
+    <span class="join-select"><select id="joinFormat" aria-label="Formato de salida"><option value="mp4">MP4</option><option value="webm">WebM</option><option value="mkv">MKV</option><option value="mov">MOV</option></select><span class="material-symbols-rounded join-chevron" aria-hidden="true">keyboard_arrow_down</span></span>
+    <span id="joinStatus" role="status" aria-live="polite">Para clips con los mismos ajustes de video y audio.</span>
+  </div>
+  <div class="join-footer"><span id="joinCount">Agrega al menos dos clips para unirlos.</span><button class="btn main" id="btnJoin" disabled><span aria-hidden="true" class="material-symbols-rounded">merge</span>Unir videos</button></div>
+</section>
+<div class="section-heading"><h2><span>02</span> Tu espacio de edición</h2></div><section class="card preview-card" aria-label="Vista previa y línea de tiempo"><div class="preview-stage"><div class="empty-preview" id="emptyPreview"><span class="empty-play" aria-hidden="true"><span class="material-symbols-rounded">play_arrow</span></span><strong>Aquí comienza tu próxima edición</strong><span>Importa un video para verlo en este espacio</span></div>
+  <video id="video" playsinline aria-label="Vista previa del video"></video></div>
+  <div id="trim" class="locked">
+    <div class="row">
+      <button class="btn tool" id="btnPlay"><span aria-hidden="true" class="material-symbols-rounded i-play">play_arrow</span><span aria-hidden="true" class="material-symbols-rounded i-pause">pause</span><span>Reproducir</span></button>
+      <button class="btn tool" id="btnIn"><span aria-hidden="true" class="material-symbols-rounded">first_page</span>Inicio</button>
+      <button class="btn tool" id="btnOut"><span aria-hidden="true" class="material-symbols-rounded">last_page</span>Fin</button>
+      <span class="grow"></span>
+      <button class="btn tool sq" id="zOut" aria-label="Alejar"><span aria-hidden="true" class="material-symbols-rounded">zoom_out</span></button>
+      <button class="btn tool sq" id="zIn" aria-label="Acercar"><span aria-hidden="true" class="material-symbols-rounded">zoom_in</span></button>
+    </div>
+    <div class="tlbox"><canvas id="tl" role="img" aria-label="Línea de tiempo; también puedes ajustar inicio, fin y desfase con los campos numéricos"></canvas><div class="info"><span id="sD"></span><span id="sP"></span></div></div>
+  </div>
+</section>
+
+<div class="section-heading"><h2><span>03</span> Ajusta la mezcla</h2></div><section class="card list locked" id="ctrls" aria-label="Mezcla y recorte">
+  <div class="li"><label for="volO">Original</label><input type="range" id="volO" min="0" max="100" value="100"></div>
+  <div class="li"><label for="volE">Externo</label><input type="range" id="volE" min="0" max="100" value="100"></div>
+  <div class="li"><label for="offMs">Desfase (ms)</label><div class="step">
+    <button class="btn" data-d="-10">−10</button><button class="btn" data-d="-1">−1</button>
+    <input class="num" type="number" id="offMs" value="0" step="1">
+    <button class="btn" data-d="1">+1</button><button class="btn" data-d="10">+10</button></div></div>
+  <div class="li"><label for="tStart">Inicio (s)</label><span class="grow"></span><input class="num" type="number" id="tStart" value="0" min="0" step="0.01"></div>
+  <div class="li"><label for="tEnd">Fin (s)</label><span class="grow"></span><input class="num" type="number" id="tEnd" value="0" min="0" step="0.01"></div>
+</section>
+
+<details class="card"><summary>Audio completo y FFmpeg<span aria-hidden="true" class="material-symbols-rounded disclosure-icon">chevron_right</span></summary>
+  <div id="exp" class="locked" style="margin-top:12px">
+    <div class="export-actions"><button class="btn" id="btnWav"><span aria-hidden="true" class="material-symbols-rounded">download</span>WAV sincronizado</button>
+    <button class="btn" id="btnCopy">Copiar comando</button></div>
+    <code id="cmd"></code>
+  </div>
+</details>
+<footer>Sync Studio</footer></main>
+
+<div class="bar glass locked" id="bar">
+  <div class="seg" id="fmt"></div>
+  <span id="bmsg" role="status" aria-live="polite">Listo para crear</span>
+  <button class="btn main" id="btnExport"><span aria-hidden="true" class="material-symbols-rounded">movie_edit</span>Exportar</button>
+  <progress id="prog" max="1" value="0"></progress>
+</div>
+
+
+
+<script defer src="public/vendor/mediabunny.js"></script>
+<script defer src="src/js/app.js"></script>
+<script defer src="src/js/analysis.js"></script>
+<script defer src="src/js/playback.js"></script>
+<script defer src="src/js/audio-export.js"></script>
+<script defer src="src/js/video-export.js"></script>
+<script defer src="src/js/timeline.js"></script>
+<script defer src="src/js/theme.js"></script>
+</body>
+</html>
