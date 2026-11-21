@@ -142,12 +142,19 @@ async function exportJoin(job, output, hw) {
   }
   video.close(); audio?.close();
 }
+const copyTimestampTolerance = 0.000001;
+// AAC priming can occupy a complete packet before the clip's video starts.
+function isAacPreroll(packet, origin) {
+  return packet.duration > 0 && packet.timestamp < origin - copyTimestampTolerance
+    && packet.timestamp + packet.duration <= origin + copyTimestampTolerance;
+}
+
 // Validate frame intervals in presentation order within each GOP. The copy
 // still emits packets in decode order, as required by the muxer.
-async function validCopyTrack(track, isVideo, origin, end) {
+async function validCopyTrack(track, isVideo, origin, end, skipAacPreroll = false) {
   const sink = new MB.EncodedPacketSink(track);
   if (isVideo && (await sink.getFirstPacket({ verifyKeyPackets: true }))?.type !== 'key') return false;
-  const tolerance = 0.000001;
+  const tolerance = copyTimestampTolerance;
   let previousEnd = -Infinity;
   const frames = [];
   const checkFrames = () => {
@@ -160,6 +167,7 @@ async function validCopyTrack(track, isVideo, origin, end) {
     return true;
   };
   for await (const packet of sink.packets(undefined, undefined, { metadataOnly: true })) {
+    if (skipAacPreroll && frames.length === 0 && isAacPreroll(packet, origin)) continue;
     if (!(packet.duration > 0) || packet.timestamp < origin - tolerance
       || packet.timestamp + packet.duration > end + tolerance) return false;
     if ((!isVideo || packet.type === 'key') && !checkFrames()) return false;
@@ -202,7 +210,7 @@ async function inspectCopyJoin(job) {
       const origin = await vt.getFirstTimestamp(), videoEnd = await vt.computeDuration();
       if (!(videoEnd > origin) || !await validCopyTrack(vt, true, origin, videoEnd)) return null;
       const audioEnd = at ? await at.computeDuration() : videoEnd;
-      if (at && !await validCopyTrack(at, false, origin, audioEnd)) return null;
+      if (at && !await validCopyTrack(at, false, origin, audioEnd, audio === 'aac')) return null;
       // Place the next clip after both tracks, including the trailing audio
       // packet used by recordings such as Zoom.
       const end = Math.max(videoEnd, audioEnd);
@@ -228,6 +236,9 @@ async function copyJoin(job, output, plan) {
       vi = new MB.EncodedPacketSink(vt).packets();
       ai = at ? new MB.EncodedPacketSink(at).packets() : null;
       v = await vi.next(); a = ai ? await ai.next() : { done: true };
+      while (first.audio === 'aac' && !a.done && isAacPreroll(a.value, plan[i].origin)) {
+        a = await ai.next();
+      }
       let clipProgress = 0;
       while (!v.done || !a.done) {
         const useVideo = a.done || (!v.done && v.value.timestamp <= a.value.timestamp);
